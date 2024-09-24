@@ -1,4 +1,4 @@
-# $NetBSD: GENERIC,v 1.459.2.14 2019/03/09 17:10:20 martin Exp $
+# $NetBSD: GENERIC,v 1.599.4.6 2024/06/20 11:00:07 martin Exp $
 #
 # GENERIC machine description file
 #
@@ -22,7 +22,7 @@ include 	"arch/amd64/conf/std.amd64"
 
 options 	INCLUDE_CONFIG_FILE	# embed config file in kernel binary
 
-#ident		"GENERIC-$Revision: 1.459.2.14 $"
+#ident		"GENERIC-$Revision: 1.599.4.6 $"
 
 maxusers	64		# estimated number of users
 
@@ -75,8 +75,9 @@ options 	SYSCTL_INCLUDE_DESCR	# Include sysctl descriptions in kernel
 
 # CPU-related options
 options 	SVS		# Separate Virtual Space
-makeoptions	SPECTRE_V2_GCC_MITIGATION=1	# GCC Spectre variant 2
-						# migitation
+
+# GCC Spectre variant 2 mitigation
+makeoptions	SPECTRE_V2_GCC_MITIGATION=1	
 options 	SPECTRE_V2_GCC_MITIGATION
 
 # CPU features
@@ -134,8 +135,10 @@ options 	COMPAT_20	# NetBSD 2.0,
 options 	COMPAT_30	# NetBSD 3.0,
 options 	COMPAT_40	# NetBSD 4.0,
 options 	COMPAT_50	# NetBSD 5.0,
-options 	COMPAT_60	# NetBSD 6.0, and
-options 	COMPAT_70	# NetBSD 7.0 binary compatibility.
+options 	COMPAT_60	# NetBSD 6.0, 
+options 	COMPAT_70	# NetBSD 7.0,
+options 	COMPAT_80	# NetBSD 8.0, 
+options 	COMPAT_90	# NetBSD 9.0 binary compatibility.
 options 	COMPAT_43	# and 4.3BSD
 #options 	COMPAT_386BSD_MBRPART # recognize old partition ID
 
@@ -284,6 +287,8 @@ config		netbsd	root on ? type ?
 
 #IPMI support
 ipmi0		at mainbus?
+ipmi_acpi*	at acpi?
+ipmi0		at ipmi_acpi?
 
 # ACPI will be used if present. If not it will fall back to MPBIOS
 acpi0		at mainbus0
@@ -432,18 +437,23 @@ radeondrmkmsfb* at radeonfbbus?
 nouveau*	at pci? dev ? function ?
 nouveaufb*	at nouveaufbbus?
 
+# DRMUMS drivers -- make them loadable, but not statically linked in
+options 	DRM_LEGACY
+#viadrmums*	at drm?
+
+#options 	DRM_MAX_RESOLUTION_HORIZONTAL=1920	# Limit DRM size in horizontal dimension
+#options 	DRM_MAX_RESOLUTION_VERTICAL=1080	# Limit DRM size in vertical dimension
+
 # Cryptographic Devices
 
 # PCI cryptographic devices
+amdccp*	at pci? dev ? function ?	# AMD Cryptographic Coprocessor
 hifn*	at pci? dev ? function ?	# Hifn 7755/7811/795x
+#qat*	at pci? dev ? function ?	# Intel QuickAssist
 ubsec*	at pci? dev ? function ?	# Broadcom 5501/5601/580x/582x
 
 # Trusted Platform Module
 tpm*	at isa? iomem 0xfed40000 irq 7
-#tpm*	at isa? port 0x02e
-#tpm*	at isa? port 0x04e
-#tpm*	at isa? port 0x07e
-#tpm*	at isa? port 0x0ee
 
 # Serial Devices
 
@@ -523,6 +533,11 @@ iic*	at ichsmb?
 ismt* at pci? dev ? function ?
 iic*	at ismt?
 
+# DesignWare I2C controller as found in some Intel PCH and AMD FCH devices.
+dwiic*		at acpi?		# DesignWare I2C controller
+dwiic*		at pci?			# DesignWare I2C controller
+iic*		at dwiic?
+
 # Thermal monitor and fan controller
 #dbcool* at iic? addr 0x2C		# Unknown other motherboard(s)
 #dbcool* at iic? addr 0x2D		# Tyan S2881
@@ -557,6 +572,16 @@ iic*	at ismt?
 #sdtemp* at iic? addr 0x1d
 #sdtemp* at iic? addr 0x1e
 #sdtemp* at iic? addr 0x1f
+
+# Intel GPIO
+igpio*         at acpi? 
+
+# I2C HID devices
+ihidev* at iic?
+
+# I2C Mice
+ims*	at ihidev? reportid ?
+wsmouse* at ims? mux 0
 
 # I2O devices
 iop*	at pci? dev ? function ?	# I/O processor
@@ -879,9 +904,11 @@ urlphy* at mii? phy ?			# Realtek RTL8150L internal PHYs
 
 # USB Controller and Devices
 
+# Virtual USB controller
+#pseudo-device	vhci
+
 # PCI USB controllers
 xhci*	at pci?	dev ? function ?	# eXtensible Host Controller
-					# xhci is at best experimental
 ehci*	at pci?	dev ? function ?	# Enhanced Host Controller
 ohci*	at pci?	dev ? function ?	# Open Host Controller
 uhci*	at pci?	dev ? function ?	# Universal Host Controller (Intel)
@@ -906,10 +933,6 @@ usb*	at slhci?
 
 include "dev/usb/usbdevices.config"
 
-# Toshiba Oboe
-#oboe*	at pci? dev ? function ?	# broken -- vtophys
-#irframe* at oboe?
-
 # PCI IEEE1394 controllers
 fwohci* at pci? dev ? function ?	# IEEE1394 Open Host Controller
 
@@ -928,7 +951,6 @@ auich*	at pci? dev ? function ?	# Intel/AMD/nVidia AC'97 Audio
 auixp*	at pci? dev ? function ?	# ATI IXP AC'97 Audio
 autri*	at pci? dev ? function ?	# Trident 4DWAVE based AC'97 Audio
 auvia*	at pci? dev ? function ?	# VIA AC'97 audio
-#azalia* at pci? dev ? function ?	# High Definition Audio
 clcs*	at pci? dev ? function ?	# Cirrus Logic CS4280
 clct*	at pci? dev ? function ?	# Cirrus Logic CS4281
 cmpci*	at pci? dev ? function ?	# C-Media CMI8338/8738
@@ -1057,9 +1079,13 @@ ld*	at virtio?			# Virtio disk device
 vioif*	at virtio?			# Virtio network device
 viornd* at virtio?			# Virtio entropy device
 vioscsi* at virtio?			# Virtio SCSI device
+#vio9p*	at virtio?			# Virtio 9P device
 
 # Hyper-V devices
 vmbus*		at acpi?		# Hyper-V VMBus
+genfb*		at vmbus?		# Hyper-V Synthetic Video Framebuffer
+hvkbd*		at vmbus?		# Hyper-V Synthetic Keyboard
+wskbd*		at hvkbd? console ? mux 1
 hvn*		at vmbus?		# Hyper-V NetVSC
 hvs*		at vmbus?		# Hyper-V StorVSC
 hvheartbeat*	at vmbus?		# Hyper-V Heartbeat Service
@@ -1103,14 +1129,12 @@ options 	VND_COMPRESSION		# compressed vnd(4)
 
 # network pseudo-devices
 pseudo-device	bpfilter		# Berkeley packet filter
-#pseudo-device	carp			# Common Address Redundancy Protocol
-pseudo-device	ipfilter		# IP filter (firewall) and NAT
+pseudo-device	carp			# Common Address Redundancy Protocol
 pseudo-device	loop			# network loopback
 #pseudo-device	mpls			# MPLS pseudo-interface
 pseudo-device	ppp			# Point-to-Point Protocol
 pseudo-device	pppoe			# PPP over Ethernet (RFC 2516)
 pseudo-device	sl			# Serial Line IP
-pseudo-device	strip			# Starmode Radio IP (Metricom)
 pseudo-device	irframetty		# IrDA frame line discipline
 pseudo-device	tun			# network tunneling over tty
 pseudo-device	tap			# virtual Ethernet
@@ -1121,13 +1145,11 @@ pseudo-device	ipsecif			# tunnel interface for routing based ipsec
 pseudo-device	stf			# 6to4 IPv6 over IPv4 encapsulation
 pseudo-device	vlan			# IEEE 802.1q encapsulation
 pseudo-device	bridge			# simple inter-network bridging
-#options 	BRIDGE_IPF		# bridge uses IP/IPv6 pfil hooks too
+pseudo-device	vether			# Virtual Ethernet for bridge
 pseudo-device	agr			# IEEE 802.3ad link aggregation
 pseudo-device	l2tp			# L2TPv3 interface
-#pseudo-device	pf			# PF packet filter
-#pseudo-device	pflog			# PF log if
-#pseudo-device	pfsync			# PF sync if
-#pseudo-device	npf			# NPF packet filter
+pseudo-device	lagg			# Link aggregation interface
+pseudo-device	npf			# NPF packet filter
 
 #pseudo-device	canloop			# CAN loopback interface
 
@@ -1146,16 +1168,15 @@ pseudo-device	ksyms			# /dev/ksyms
 pseudo-device	lockstat		# lock profiling
 pseudo-device	bcsp			# BlueCore Serial Protocol
 pseudo-device	btuart			# Bluetooth HCI UART (H4)
-
-# a pseudo device needed for Coda	# also needs CODA (above)
-pseudo-device	vcoda			# coda minicache <-> venus comm.
-
-# a pseudo device needed for SMBFS
-pseudo-device	nsmb			# experimental - SMB requester
+#pseudo-device	nvmm			# NetBSD Virtual Machine Monitor
+pseudo-device 	swwdog			# software watchdog timer -- swwdog(4)
 
 # wscons pseudo-devices
 pseudo-device	wsmux			# mouse & keyboard multiplexor
 pseudo-device	wsfont
+# Give us a choice of fonts based on monitor size
+options 	FONT_BOLD8x16
+options 	FONT_BOLD16x32
 
 # pseudo audio device driver
 pseudo-device	pad
@@ -1163,24 +1184,11 @@ pseudo-device	pad
 # userland interface to drivers, including autoconf and properties retrieval
 pseudo-device	drvctl
 
-options 	FILEASSOC		# fileassoc(9) - needed by Veriexec
-					# and PAX_SEGVGUARD
+# EFI runtime support
+options 	EFI_RUNTIME
+pseudo-device 	efi			# /dev/efi
 
-# Veriexec
-#
-# a pseudo device needed for veriexec
-pseudo-device	veriexec
-#
-# Uncomment the fingerprint methods below that are desired. Note that
-# removing fingerprint methods will have almost no impact on the kernel
-# code size.
-#
-options VERIFIED_EXEC_FP_RMD160
-options VERIFIED_EXEC_FP_SHA256
-options VERIFIED_EXEC_FP_SHA384
-options VERIFIED_EXEC_FP_SHA512
-options VERIFIED_EXEC_FP_SHA1
-options VERIFIED_EXEC_FP_MD5
+include "dev/veriexec.config
 
 options 	PAX_SEGVGUARD=0		# PaX Segmentation fault guard
 options 	PAX_MPROTECT=1		# PaX mprotect(2) restrictions
