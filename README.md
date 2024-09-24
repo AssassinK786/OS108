@@ -1,8 +1,6 @@
 # OS108
 
-OS108 is a fast, open and Secure replacement Operating System for Windows and macOS. Built on top of OpenBSD, OS108 provides a simple desktop-oriented operating system.
-
-This variant is Built on top of OpenBSD
+OS108 is a fast, open and Secure replacement Operating System for Windows and macOS. Built on top of NetBSD, OS108 provides a simple desktop-oriented operating system.
 
 ![os108_slim_screenshot](https://user-images.githubusercontent.com/17174485/50375641-aea3b900-0626-11e9-8141-9bfc4fa91c8d.png)
 
